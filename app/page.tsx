@@ -1,67 +1,90 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import GameLauncher from "@/components/GameLauncher";
+import PatientDetail from "@/components/PatientDetail";
+import PatientRoster from "@/components/PatientRoster";
+import Protocols from "@/components/Protocols";
+import SessionDetail from "@/components/SessionDetail";
+import Sidebar, { type Section } from "@/components/Sidebar";
+import { defaultPlan, PATIENTS, type EmgCalibration, type LevelConfig, type Plan } from "@/lib/mockData";
+
+type View = "roster" | "detail" | "session" | "protocols" | "launcher";
+
+const SECTION_HOME: Record<Section, View> = { patients: "roster", protocols: "protocols", launcher: "launcher" };
+
+function sectionOf(view: View): Section {
+  if (view === "protocols" || view === "launcher") return view;
+  return "patients";
+}
 
 export default function Home() {
+  const [view, setView] = useState<View>("roster");
+  const [pid, setPid] = useState(PATIENTS[0].mrn);
+  const [query, setQuery] = useState("");
+  // Per-patient edits, keyed by MRN. Kept here so they survive navigating between screens.
+  const [plans, setPlans] = useState<Record<string, Plan>>({});
+  const [emg, setEmg] = useState<Record<string, EmgCalibration>>({});
+  const [levelCfg, setLevelCfg] = useState<Record<string, Record<number, LevelConfig>>>({});
+  const [launched, setLaunched] = useState<{ mrn: string; at: string } | null>(null);
+
+  const patient = PATIENTS.find((p) => p.mrn === pid) ?? PATIENTS[0];
+  const plan = plans[patient.mrn] ?? defaultPlan(patient);
+
+  const go = (next: View) => {
+    setView(next);
+    window.scrollTo(0, 0);
+  };
+
+  const launch = () => {
+    const d = new Date();
+    const at = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+    setLaunched({ mrn: patient.mrn, at });
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+    <div className="flex min-h-screen">
+      <Sidebar active={sectionOf(view)} onNavigate={(s) => go(SECTION_HOME[s])} />
+
+      <main className="min-w-0 flex-1 px-12 pt-10 pb-20">
+        <div className="mx-auto flex max-w-[1040px] flex-col gap-6">
+          {view === "roster" && (
+            <PatientRoster
+              query={query}
+              onQueryChange={setQuery}
+              onOpenPatient={(mrn) => {
+                setPid(mrn);
+                go("detail");
+              }}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          )}
+          {view === "detail" && <PatientDetail patient={patient} onBack={() => go("roster")} onOpenSession={() => go("session")} />}
+          {view === "session" && <SessionDetail patient={patient} onBack={() => go("detail")} />}
+          {view === "protocols" && (
+            <Protocols
+              patient={patient}
+              onPickPatient={setPid}
+              plan={plan}
+              onPlanChange={(patch) => setPlans((all) => ({ ...all, [patient.mrn]: { ...plan, ...patch, dirty: true } }))}
+              onAssign={() =>
+                setPlans((all) => ({ ...all, [patient.mrn]: { ...plan, dirty: false, assignedAt: "30 Sep 2026" } }))
+              }
+              emg={emg[patient.mrn]}
+              onEmgChange={(next) => setEmg((all) => ({ ...all, [patient.mrn]: next }))}
+              levelConfig={levelCfg[patient.mrn] ?? {}}
+              onLevelConfigChange={(n, next) =>
+                setLevelCfg((all) => ({ ...all, [patient.mrn]: { ...all[patient.mrn], [n]: next } }))
+              }
+            />
+          )}
+          {view === "launcher" && (
+            <GameLauncher
+              patient={patient}
+              onPickPatient={setPid}
+              launchedAt={launched?.mrn === patient.mrn ? launched.at : null}
+              onLaunch={launch}
+            />
+          )}
         </div>
       </main>
     </div>
