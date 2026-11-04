@@ -7,7 +7,15 @@ import PatientRoster from "@/components/PatientRoster";
 import Protocols from "@/components/Protocols";
 import SessionDetail from "@/components/SessionDetail";
 import Sidebar, { type Section } from "@/components/Sidebar";
-import { defaultPlan, PATIENTS, type EmgCalibration, type LevelConfig, type Plan } from "@/lib/mockData";
+import {
+  BUILT_IN_PRESETS,
+  defaultPlan,
+  PATIENTS,
+  type EmgCalibration,
+  type LevelConfig,
+  type Plan,
+  type Preset,
+} from "@/lib/mockData";
 
 type View = "roster" | "detail" | "session" | "protocols" | "launcher";
 
@@ -26,6 +34,8 @@ export default function Home() {
   const [plans, setPlans] = useState<Record<string, Plan>>({});
   const [emg, setEmg] = useState<Record<string, EmgCalibration>>({});
   const [levelCfg, setLevelCfg] = useState<Record<string, Record<number, LevelConfig>>>({});
+  // Presets are shared across patients.
+  const [presets, setPresets] = useState<Preset[]>(BUILT_IN_PRESETS);
   const [launched, setLaunched] = useState<{ mrn: string; at: string } | null>(null);
 
   const patient = PATIENTS.find((p) => p.mrn === pid) ?? PATIENTS[0];
@@ -75,6 +85,13 @@ export default function Home() {
               onLevelConfigChange={(n, next) =>
                 setLevelCfg((all) => ({ ...all, [patient.mrn]: { ...all[patient.mrn], [n]: next } }))
               }
+              presets={presets}
+              onApplyPreset={(p) => {
+                setPlans((all) => ({ ...all, [patient.mrn]: { ...plan, difficulty: p.difficulty, days: p.days, dirty: true } }));
+                setLevelCfg((all) => ({ ...all, [patient.mrn]: p.levels }));
+              }}
+              onSavePreset={(p) => setPresets((all) => [...all.filter((x) => x.name !== p.name), p])}
+              onDeletePreset={(name) => setPresets((all) => all.filter((x) => x.name !== name))}
             />
           )}
           {view === "launcher" && (

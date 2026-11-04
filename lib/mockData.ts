@@ -1,5 +1,7 @@
 // Mock data mirroring the Galactic Glide design. Replace with Firestore reads in lib/firebase.ts.
 
+import { LEVEL_RULES } from "./gameRules";
+
 export type Leg = "Left" | "Right";
 export type Result = "Passed" | "Failed";
 export type Difficulty = "Easy" | "Medium" | "Hard";
@@ -38,7 +40,8 @@ export interface EmgCalibration {
 
 export interface LevelConfig {
   gates: string;
-  gap: string;
+  gapMin: string;
+  gapMax: string;
   rand: boolean;
 }
 
@@ -75,13 +78,53 @@ export const EMG_DEFAULTS: Record<string, [number, number]> = {
   "MRN 40-8104": [0.29, 0.77],
 };
 
-/** [gates, seconds between gates] for levels 1–5. */
-export const LEVEL_DEFAULTS: [number, number][] = [[8, 22], [10, 20], [12, 18], [14, 16], [16, 14]];
-
+/** Defaults match the game: every level is randomized today. */
 export function defaultLevelConfig(level: number): LevelConfig {
-  const [gates, gap] = LEVEL_DEFAULTS[level - 1];
-  return { gates: String(gates), gap: String(gap), rand: level >= 3 };
+  const { gates, gap } = LEVEL_RULES[level - 1];
+  return { gates: String(gates), gapMin: String(gap[0]), gapMax: String(gap[1]), rand: true };
 }
+
+/** A reusable bundle of plan and level settings. Target levels and EMG calibration are patient-specific and not included. */
+export interface Preset {
+  name: string;
+  description: string;
+  builtIn?: boolean;
+  difficulty: Difficulty;
+  days: string[];
+  levels: Record<number, LevelConfig>;
+}
+
+function presetLevels(patch: Partial<LevelConfig> = {}): Record<number, LevelConfig> {
+  return Object.fromEntries([1, 2, 3, 4, 5].map((n) => [n, { ...defaultLevelConfig(n), ...patch }]));
+}
+
+/** Placeholder presets until the team settles on standard protocols. */
+export const BUILT_IN_PRESETS: Preset[] = [
+  {
+    name: "Gentle start",
+    description: "Lighter demands while the patient learns the game. Each level uses its set gate layout.",
+    builtIn: true,
+    difficulty: "Easy",
+    days: ["Tue", "Thu"],
+    levels: presetLevels({ rand: false }),
+  },
+  {
+    name: "Standard",
+    description: "The game as designed, three sessions a week.",
+    builtIn: true,
+    difficulty: "Medium",
+    days: ["Mon", "Wed", "Fri"],
+    levels: presetLevels(),
+  },
+  {
+    name: "Challenge",
+    description: "Harder gates, more of them, and more frequent sessions.",
+    builtIn: true,
+    difficulty: "Hard",
+    days: ["Mon", "Tue", "Thu", "Fri"],
+    levels: presetLevels({ gates: "12" }),
+  },
+];
 
 export const SESSIONS: Session[] = [
   { date: "12 Sep 2026", level: "4", score: "3,240", lives: "1 of 3", status: "Passed", dur: "4:12" },
