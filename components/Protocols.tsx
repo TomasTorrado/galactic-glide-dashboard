@@ -17,6 +17,7 @@ import {
   type Plan,
   type Preset,
 } from "@/lib/mockData";
+import { InfoToggle } from "./Explain";
 import PatientPicker from "./PatientPicker";
 
 const CARD = "rounded-[14px] border border-bd bg-card";
@@ -407,19 +408,11 @@ export default function Protocols({
       <div className={`${CARD} px-[26px] py-6`}>
         <div className="flex flex-wrap items-baseline justify-between gap-2.5">
           <div className="text-[15px] font-semibold">Level settings</div>
-          <button
-            type="button"
-            aria-expanded={showRandInfo}
-            onClick={() => setShowRandInfo(!showRandInfo)}
-            className="flex cursor-pointer items-center gap-1.5 text-[13px] text-acc hover:text-acc-hover"
-          >
-            <svg viewBox="0 0 16 16" aria-hidden="true" className="size-4 shrink-0 fill-none stroke-current">
-              <circle cx="8" cy="8" r="6.75" strokeWidth={1.5} />
-              <path d="M8 7.25v4" strokeWidth={1.5} strokeLinecap="round" />
-              <circle cx="8" cy="4.75" r="0.4" strokeWidth={1.2} className="fill-current" />
-            </svg>
-            {showRandInfo ? "Hide" : "What does Randomize gates do?"}
-          </button>
+          <InfoToggle
+            open={showRandInfo}
+            onToggle={() => setShowRandInfo(!showRandInfo)}
+            label="What does Randomize gates do?"
+          />
         </div>
         <div className="mt-1 text-[13px] text-t3">Gates and pacing for each level</div>
         {showRandInfo && (

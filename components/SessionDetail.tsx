@@ -1,5 +1,8 @@
+import { useState } from "react";
+import { SESSION_TEXT } from "@/lib/descriptions";
 import { emgSession, THRESHOLD_MV } from "@/lib/emgSignal";
 import type { Patient } from "@/lib/mockData";
+import { InfoToggle, LearnMore, Term } from "./Explain";
 
 const CARD = "rounded-[14px] border border-bd bg-card";
 
@@ -21,6 +24,9 @@ interface SessionDetailProps {
 }
 
 export default function SessionDetail({ patient, onBack }: SessionDetailProps) {
+  const [showEmgInfo, setShowEmgInfo] = useState(false);
+  const legend = SESSION_TEXT.emg.legend;
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -47,22 +53,31 @@ export default function SessionDetail({ patient, onBack }: SessionDetailProps) {
           <div className="flex flex-wrap gap-[18px] text-[13px] text-t2">
             <div className="flex items-center gap-[7px]">
               <span className="h-0.5 w-4 bg-[oklch(0.45_0.04_220)]" />
-              Raw
+              <Term tip={legend.Raw}>Raw</Term>
             </div>
             <div className="flex items-center gap-[7px]">
               <span className="h-[3px] w-4 bg-[oklch(0.82_0.1_235)]" />
-              RMS
+              <Term tip={legend.RMS}>RMS</Term>
             </div>
             <div className="flex items-center gap-[7px]">
               <span className="w-4 border-t-2 border-dashed border-t3" />
-              Threshold
+              <Term tip={legend.Threshold} align="right">Threshold</Term>
             </div>
             <div className="flex items-center gap-[7px]">
               <span className="font-bold text-[oklch(0.74_0.15_25)]">✕</span>
-              Collision
+              <Term tip={legend.Collision} align="right">Collision</Term>
             </div>
           </div>
         </div>
+        <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+          <div className="max-w-[560px] text-[13px] leading-normal text-t3">{SESSION_TEXT.emg.short}</div>
+          <InfoToggle open={showEmgInfo} onToggle={() => setShowEmgInfo(!showEmgInfo)} label="How to read this chart" />
+        </div>
+        {showEmgInfo && (
+          <div className="mt-4">
+            <LearnMore sections={SESSION_TEXT.emg.more} />
+          </div>
+        )}
         <svg viewBox="0 0 760 350" className="mt-[18px] block aspect-[760/350] h-auto w-full overflow-visible">
           {[34, 103, 172, 241].map((y) => (
             <line key={y} x1={40} y1={y} x2={760} y2={y} className="stroke-[oklch(0.25_0.028_258)]" />
@@ -89,44 +104,54 @@ export default function SessionDetail({ patient, onBack }: SessionDetailProps) {
         </svg>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,340px),1fr))] items-start gap-6">
-        <div className="grid grid-cols-2 gap-3">
-          {meta.map((m) => (
-            <div key={m.k} className="rounded-xl border border-bd bg-card px-[18px] py-4">
-              <div className="text-[12.5px] text-t3">{m.k}</div>
-              <div className="mt-[5px] text-[17px] font-semibold">{m.v}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className={`${CARD} px-[26px] py-6`}>
-          <div className="flex items-baseline justify-between gap-3">
-            <div className="text-base font-semibold">Gates</div>
-            <div className="text-[13.5px] text-t2">
-              {emgSession.gatesPassed} of {emgSession.gateCount} passed
-            </div>
-          </div>
-          <div className="mt-4 text-[12.5px] text-t3">Start</div>
-          <div className="relative mt-1.5 flex flex-col">
-            <div className="absolute top-3.5 bottom-3.5 left-[11px] w-0.5 bg-bd" />
-            {emgSession.gates.map((g) => (
-              <div key={g.n} className="relative flex items-center gap-3.5 py-[5px]">
-                <div
-                  className={`flex size-6 shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-bold ${
-                    g.missed ? "border-fail bg-fail-bg text-fail" : "border-pass bg-pass-bg text-pass"
-                  }`}
-                >
-                  {g.missed ? "✕" : "✓"}
+      <div className="@container">
+        <div className="grid grid-cols-1 gap-6 @min-[704px]:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3 self-start">
+            {meta.map((m, i) => (
+              <div key={m.k} className="rounded-xl border border-bd bg-card px-[18px] py-4">
+                <div className="text-[12.5px] text-t3">
+                  <Term tip={SESSION_TEXT.tiles[m.k]} align={i % 2 ? "right" : "left"}>
+                    {m.k}
+                  </Term>
                 </div>
-                <div className={`flex-1 text-sm ${g.missed ? "text-t1" : "text-t2"}`}>Gate {g.n}</div>
-                <div className="font-mono text-[12.5px] text-t3">{g.time}</div>
-                <div className={`w-[52px] text-right text-[13px] font-medium ${g.missed ? "text-fail" : "text-pass"}`}>
-                  {g.missed ? "Missed" : "Passed"}
-                </div>
+                <div className="mt-[5px] text-[17px] font-semibold">{m.v}</div>
               </div>
             ))}
           </div>
-          <div className="mt-1.5 text-[12.5px] text-t3">Finish</div>
+
+          {/* Side by side, contain-size stops the list from growing the row: the card ends with the tiles and scrolls. */}
+          <div className={`${CARD} flex h-[440px] flex-col px-[26px] pt-6 pb-4 @min-[704px]:h-auto @min-[704px]:contain-size`}>
+            <div className="flex items-baseline justify-between gap-3">
+              <div className="text-base font-semibold">Gates</div>
+              <div className="text-[13.5px] text-t2">
+                {emgSession.gatesPassed} of {emgSession.gateCount} passed
+              </div>
+            </div>
+            <div className="mt-1.5 text-[13px] leading-normal text-t3">{SESSION_TEXT.gates.short}</div>
+            <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-2">
+              <div className="text-[12.5px] text-t3">Start</div>
+              <div className="relative mt-1.5 flex flex-col">
+                <div className="absolute top-3.5 bottom-3.5 left-[11px] w-0.5 bg-bd" />
+                {emgSession.gates.map((g) => (
+                  <div key={g.n} className="relative flex items-center gap-3.5 py-[5px]">
+                    <div
+                      className={`flex size-6 shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-bold ${
+                        g.missed ? "border-fail bg-fail-bg text-fail" : "border-pass bg-pass-bg text-pass"
+                      }`}
+                    >
+                      {g.missed ? "✕" : "✓"}
+                    </div>
+                    <div className={`flex-1 text-sm ${g.missed ? "text-t1" : "text-t2"}`}>Gate {g.n}</div>
+                    <div className="font-mono text-[12.5px] text-t3">{g.time}</div>
+                    <div className={`w-[52px] text-right text-[13px] font-medium ${g.missed ? "text-fail" : "text-pass"}`}>
+                      {g.missed ? "Missed" : "Passed"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-1.5 text-[12.5px] text-t3">Finish</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

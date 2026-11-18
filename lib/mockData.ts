@@ -156,7 +156,7 @@ export const LEVEL_TRACK = [
 
 /** Shared x positions for the two small per-session charts. */
 export const SESSION_XS = [56, 102, 148, 194, 240, 286, 332];
-export const FLIGHT_PRACTICE = [52, 58, 61, 55, 68, 73, 79];
+export const GLIDE_PRACTICE = [52, 58, 61, 55, 68, 73, 79];
 export const ASTRO_BOOST = {
   score: [2360, 1420, 2740, 2980, 2110, 1890, 3240],
   gates: [9, 7, 11, 12, 10, 9, 12],

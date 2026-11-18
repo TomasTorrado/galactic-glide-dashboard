@@ -3,7 +3,7 @@ import {
   ASTRO_BOOST,
   BASELINE_PENDING,
   BASELINE_TREND,
-  FLIGHT_PRACTICE,
+  GLIDE_PRACTICE,
   LEVEL_TRACK,
   SESSIONS,
   SESSION_XS,
@@ -20,9 +20,9 @@ const by = (v: number) => 244 - (v / 1.2) * 224;
 const baseDots = BASELINE_TREND.map((d, i) => ({ x: bx(i), y: by(d.v).toFixed(1), label: d.label }));
 const basePoints = baseDots.map((d) => `${d.x},${d.y}`).join(" ");
 
-// Flight Practice / Astro Boost geometry (shared 380×220 viewBox)
-const fpDots = FLIGHT_PRACTICE.map((v, i) => ({ x: SESSION_XS[i], y: (176 - (v / 100) * 160).toFixed(1) }));
-const fpPoints = fpDots.map((d) => `${d.x},${d.y}`).join(" ");
+// Glide Practice / Astro Boost geometry (shared 380×220 viewBox)
+const gpDots = GLIDE_PRACTICE.map((v, i) => ({ x: SESSION_XS[i], y: (176 - (v / 100) * 160).toFixed(1) }));
+const gpPoints = gpDots.map((d) => `${d.x},${d.y}`).join(" ");
 const abBars = ASTRO_BOOST.score.map((v, i) => {
   const y = 176 - (v / 4500) * 160;
   return { x: SESSION_XS[i] - 11, y: y.toFixed(1), h: (176 - y).toFixed(1) };
@@ -112,7 +112,7 @@ export default function PatientDetail({ patient, onBack, onOpenSession }: Patien
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,400px),1fr))] gap-6">
         <div className={`${CARD} px-[26px] py-6`}>
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-            <div className="text-base font-semibold">Flight Practice</div>
+            <div className="text-base font-semibold">Glide Practice</div>
             <div className="text-[13px] text-pass">79% latest</div>
           </div>
           <div className="mt-[3px] text-[13px] text-t3">Control accuracy: time the RMS signal stayed in the target band</div>
@@ -123,9 +123,9 @@ export default function PatientDetail({ patient, onBack, onOpenSession }: Patien
             <AxisText x={28} y={20}>100%</AxisText>
             <AxisText x={28} y={100}>50%</AxisText>
             <AxisText x={28} y={180}>0%</AxisText>
-            <polygon points={`${fpPoints} 332,176 56,176`} className="fill-acc/10" />
-            <polyline points={fpPoints} fill="none" strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" className="stroke-acc" />
-            <Dots dots={fpDots} />
+            <polygon points={`${gpPoints} 332,176 56,176`} className="fill-acc/10" />
+            <polyline points={gpPoints} fill="none" strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" className="stroke-acc" />
+            <Dots dots={gpDots} />
             {[{ x: 56, label: "21 Jul" }, { x: 148, label: "04 Aug" }, { x: 240, label: "20 Aug" }, { x: 332, label: "10 Sep" }].map((d) => (
               <AxisText key={d.label} x={d.x} y={204} anchor="middle">{d.label}</AxisText>
             ))}
