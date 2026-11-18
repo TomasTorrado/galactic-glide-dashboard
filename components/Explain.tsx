@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 export function InfoIcon() {
   return (
@@ -39,17 +39,72 @@ export function LearnMore({ sections }: { sections: { title: string; body: strin
   );
 }
 
-/** Dotted-underlined term with a short definition on hover, focus or tap. */
-export function Term({ tip, align = "left", children }: { tip: string; align?: "left" | "right"; children: ReactNode }) {
+/** Short description line with an ⓘ that expands into a LearnMore panel. */
+export function CardIntro({
+  text,
+  sections,
+  label = "How to read this chart",
+}: {
+  text: string;
+  sections: { title: string; body: string }[];
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
-  const id = useId();
   return (
-    <span className="group relative inline-flex">
+    <>
+      <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+        <div className="max-w-[560px] text-[13px] leading-normal text-t3">{text}</div>
+        <InfoToggle open={open} onToggle={() => setOpen(!open)} label={label} />
+      </div>
+      {open && (
+        <div className="mt-4">
+          <LearnMore sections={sections} />
+        </div>
+      )}
+    </>
+  );
+}
+
+const TIP_WIDTH = 256;
+
+/**
+ * Dotted-underlined term with a short definition on hover, focus or tap.
+ * The tip is position: fixed so cards that clip or scroll can't cut it off; it closes on scroll.
+ */
+export function Term({ tip, align = "left", children }: { tip: string; align?: "left" | "right"; children: ReactNode }) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const ref = useRef<HTMLButtonElement>(null);
+  const id = useId();
+
+  const show = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    const left = align === "right" ? r.right - TIP_WIDTH : r.left;
+    setPos({ top: r.bottom + 8, left: Math.max(8, Math.min(left, window.innerWidth - TIP_WIDTH - 8)) });
+  };
+  const hide = () => setPos(null);
+
+  useEffect(() => {
+    if (!pos) return;
+    window.addEventListener("scroll", hide, true);
+    window.addEventListener("resize", hide);
+    return () => {
+      window.removeEventListener("scroll", hide, true);
+      window.removeEventListener("resize", hide);
+    };
+  }, [pos]);
+
+  return (
+    <>
       <button
+        ref={ref}
         type="button"
         aria-describedby={id}
-        onClick={() => setOpen(!open)}
-        onBlur={() => setOpen(false)}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
+        onClick={show}
         className="cursor-help underline decoration-t3 decoration-dotted underline-offset-[3px]"
       >
         {children}
@@ -57,12 +112,12 @@ export function Term({ tip, align = "left", children }: { tip: string; align?: "
       <span
         id={id}
         role="tooltip"
-        className={`absolute top-full z-10 mt-2 w-64 rounded-lg border border-bd bg-pop px-3 py-2.5 text-left text-[12.5px] font-normal leading-normal text-t2 shadow-lg ${
-          align === "right" ? "right-0" : "left-0"
-        } ${open ? "block" : "hidden group-hover:block group-focus-within:block"}`}
+        hidden={!pos}
+        style={{ ...pos, width: TIP_WIDTH }}
+        className="fixed z-50 rounded-lg border border-bd bg-pop px-3 py-2.5 text-left text-[12.5px] font-normal leading-normal text-t2 shadow-lg"
       >
         {tip}
       </span>
-    </span>
+    </>
   );
 }

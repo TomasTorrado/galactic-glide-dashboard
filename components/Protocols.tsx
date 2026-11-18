@@ -91,7 +91,7 @@ export default function Protocols({
   onDeletePreset,
 }: ProtocolsProps) {
   const [th0, max0] = EMG_DEFAULTS[patient.mrn];
-  const emg = emgOverride ?? { th: th0.toFixed(2), max: max0.toFixed(2) };
+  const emg = emgOverride ?? { th: String(th0), max: String(max0) };
   const thN = parseFloat(emg.th);
   const maxN = parseFloat(emg.max);
   const emgRatio =
@@ -136,13 +136,13 @@ export default function Protocols({
     parseFloat(shownCfg.gapMin) || LEVEL_RULES[shownLevel - 1].gap[0],
     parseFloat(shownCfg.gapMax) || LEVEL_RULES[shownLevel - 1].gap[1],
   ];
-  const maxMv = maxN > 0 ? maxN : max0;
+  const maxAu = maxN > 0 ? maxN : max0;
   const difficultyRows: { label: string; cell: (d: Difficulty) => [string, string] }[] = [
     {
       label: "Squeeze to rise",
       cell: (d) => {
         const pct = activationPct(shownLevel, d);
-        return [`${pct}% of max`, `${((pct / 100) * maxMv).toFixed(2)} mV`];
+        return [`${pct}% of max`, `${Math.round((pct / 100) * maxAu)} a.u.`];
       },
     },
     { label: "Gate opening", cell: (d) => [DIFFICULTY_PROFILES[d].opening.label, `${DIFFICULTY_PROFILES[d].opening.px} px`] },
@@ -260,12 +260,12 @@ export default function Protocols({
                 <input
                   type="number"
                   min={0}
-                  step={0.01}
+                  step={1}
                   value={emg[f.key]}
                   onChange={(e) => onEmgChange({ ...emg, [f.key]: e.target.value })}
                   className={`${NUMBER_INPUT} py-3 text-base`}
                 />
-                <span className="text-[13px] text-t3">mV</span>
+                <span className="text-[13px] text-t3">a.u.</span>
               </div>
             </label>
           ))}
@@ -353,7 +353,7 @@ export default function Protocols({
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div className="text-sm font-medium">What changes at {plan.difficulty}</div>
               <div className="text-xs text-t3">
-                Level {shownLevel} · {patient.name}&apos;s max {maxMv.toFixed(2)} mV
+                Level {shownLevel} · {patient.name}&apos;s max {maxAu.toLocaleString("en-US")} a.u.
               </div>
             </div>
             <div className="mt-1.5 text-[13px] leading-normal text-t2">{DIFFICULTY_PROFILES[plan.difficulty].summary}</div>

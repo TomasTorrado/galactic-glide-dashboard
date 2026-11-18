@@ -134,6 +134,27 @@ Facts found in the code while writing:
 - **The astronaut's height is proportional to the contraction:** bottom of the screen at the threshold, top at 20–40% of max depending on level (`game_loop.py`, `max_multipliers`).
 - **Units:** the firmware sends `analogRead` values (ADC counts, 0–4095), but the game and dashboard label them mV. Check whether they're converted anywhere before we tell clinicians they're mV.
 
-## 8. Next
+## 8. Game facts confirmed (17 Nov 2026)
+
+- **Game structure:** calibration has two tests. **Astro Boost** is the 6 s max contraction and gives max strength. **Glide Practice** is following the ghost and measures control. Then **Planets 1–5** are the game levels.
+- **Units are a.u.**, the raw sensor reading (0–4095), not mV. All "mV" labels were changed to "a.u.".
+- **Score is gates passed cleanly**, 0–10. A hit gate doesn't count. A run is passed if all 10 gates go by with a life left.
+- **Patient detail changes:**
+  - "Baseline strength" is now **Astro Boost** (max strength in a.u.).
+  - **Glide Practice** shows "Not recorded yet" and describes tracking error.
+  - The fake "Astro Boost" chart is now **Planets** (gates passed per session, passed or failed, with the level).
+- **Mock data** now matches the game: 10 gates, score 0–10, and the session threshold is 20% of max at level 4.
+
+## 9. Patient detail (done)
+
+- **Header:** a tooltip on the baseline status explains what baseline and recalibrated mean.
+- **Tiles:** tooltips on Max strength, Current level, PID gains and Engagement. The PID mock values were fixed to what the game can produce (Kp 1.2 and Ki 0.05 are game defaults; Kd 0.35–0.6 is set by Glide Practice).
+- **Astro Boost, Glide Practice, Planets:** a short line plus ⓘ (test, what it shows, how the game uses it, units).
+- **Planets:** the date labels were removed because it was unclear where each one applied. The date range is now in the description, and each bar shows its date, level, score and result on hover.
+- **Level progress:** a short line explains Cleared / Current / Locked.
+- **Sessions table:** tooltips on Score and Lives left.
+- **Tooltips now float above the page** (position fixed), so cards that clip or scroll can't cut them off. They close when the page scrolls.
+
+## 10. Next
 - Tomas reviews the Session detail wording.
 - Then Patient detail (baseline, Max RMS, Glide Practice "target band", Astro Boost), Protocols (EMG calibration), and Game Launcher.

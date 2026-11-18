@@ -23,3 +23,10 @@ Things the dashboard now shows or lets clinicians set that the Galactic Glide ga
 ## Plumbing
 - The dashboard isn't connected to the game yet (`lib/firebase.ts` is empty). None of the above takes effect until protocols are saved and the game reads them.
 - Clinician-saved presets are held only in dashboard memory and disappear on reload. They need to be stored (e.g. Firestore) to persist. The game never needs presets: applying one just fills in the protocol the game reads.
+
+## Units
+- Every "mV" label in the game (CSV headers, logs, UI) is really the raw ESP32 ADC reading, 0–4095, unconverted (`firmware/wireless_shield_peripheral.ino:51`). The dashboard now says "a.u." Rename it in the game too. Converting to real millivolts would rescale every stored threshold and PID gain, so treat that as a separate, deliberate change.
+
+## Glide Practice tracking error
+- The Flex Test (`screens/baseline/flex_test.py`) computes the average and standard deviation of the tracking error (pixels between the patient's astronaut and the ghost), uses them to set Kd, then throws them away. Save them per test so the dashboard's Glide Practice chart has data. It shows "Not recorded yet" until then.
+- Optional later: a real "time in band" metric (a tolerance band around the ghost, plus time spent inside it). This would be a new feature.

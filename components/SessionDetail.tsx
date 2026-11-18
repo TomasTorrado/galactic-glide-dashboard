@@ -1,21 +1,20 @@
-import { useState } from "react";
 import { SESSION_TEXT } from "@/lib/descriptions";
-import { emgSession, THRESHOLD_MV } from "@/lib/emgSignal";
+import { emgSession, MAX_AU, THRESHOLD_AU } from "@/lib/emgSignal";
 import type { Patient } from "@/lib/mockData";
-import { InfoToggle, LearnMore, Term } from "./Explain";
+import { CardIntro, Term } from "./Explain";
 
 const CARD = "rounded-[14px] border border-bd bg-card";
 
 const meta = [
-  { k: "Max voltage", v: emgSession.maxVoltage.toFixed(2) + " mV" },
-  { k: "Threshold", v: THRESHOLD_MV.toFixed(2) + " mV" },
-  { k: "Score", v: "3,240" },
+  { k: "Max strength", v: MAX_AU.toLocaleString("en-US") + " a.u." },
+  { k: "Threshold", v: THRESHOLD_AU + " a.u." },
+  { k: "Score", v: `${emgSession.gatesPassed} of ${emgSession.gateCount}` },
   { k: "Lives left", v: `${emgSession.livesLeft} of 3` },
   { k: "Duration", v: "4:12" },
-  { k: "Kp / Ki / Kd", v: "0.85 / 0.04 / 0.12" },
+  { k: "Kp / Ki / Kd", v: "1.2 / 0.05 / 0.40" },
 ];
 
-const yTicks: [string, number][] = [["1.2", 38], ["0.9", 107], ["0.6", 176], ["0.3", 245], ["0", 314]];
+const yTicks: [string, number][] = [["1200", 38], ["900", 107], ["600", 176], ["300", 245], ["0", 314]];
 const xTicks: [string, number][] = [["0:00", 40], ["1:00", 211.4], ["2:00", 382.9], ["3:00", 554.3], ["4:00", 725.7]];
 
 interface SessionDetailProps {
@@ -24,7 +23,6 @@ interface SessionDetailProps {
 }
 
 export default function SessionDetail({ patient, onBack }: SessionDetailProps) {
-  const [showEmgInfo, setShowEmgInfo] = useState(false);
   const legend = SESSION_TEXT.emg.legend;
 
   return (
@@ -69,15 +67,7 @@ export default function SessionDetail({ patient, onBack }: SessionDetailProps) {
             </div>
           </div>
         </div>
-        <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-          <div className="max-w-[560px] text-[13px] leading-normal text-t3">{SESSION_TEXT.emg.short}</div>
-          <InfoToggle open={showEmgInfo} onToggle={() => setShowEmgInfo(!showEmgInfo)} label="How to read this chart" />
-        </div>
-        {showEmgInfo && (
-          <div className="mt-4">
-            <LearnMore sections={SESSION_TEXT.emg.more} />
-          </div>
-        )}
+        <CardIntro text={SESSION_TEXT.emg.short} sections={SESSION_TEXT.emg.more} />
         <svg viewBox="0 0 760 350" className="mt-[18px] block aspect-[760/350] h-auto w-full overflow-visible">
           {[34, 103, 172, 241].map((y) => (
             <line key={y} x1={40} y1={y} x2={760} y2={y} className="stroke-[oklch(0.25_0.028_258)]" />

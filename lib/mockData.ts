@@ -18,7 +18,8 @@ export interface Patient {
 export interface Session {
   date: string;
   level: string;
-  score: string;
+  /** Gates passed cleanly (a gate the astronaut hits doesn't count), out of 10. */
+  score: number;
   lives: string;
   status: Result;
   dur: string;
@@ -68,14 +69,14 @@ export function defaultPlan(p: Patient): Plan {
   return SEEDED_PLANS[p.mrn] ?? { days: ["Tue", "Thu"], levels: [p.level], difficulty: "Easy", notes: "", assignedAt: null };
 }
 
-/** [threshold, max output] in mV per patient. */
+/** [threshold, max output] in a.u. (raw sensor reading, 0–4095) per patient. */
 export const EMG_DEFAULTS: Record<string, [number, number]> = {
-  "MRN 40-8821": [0.38, 1.02],
-  "MRN 40-7315": [0.22, 0.54],
-  "MRN 40-6642": [0.46, 1.31],
-  "MRN 40-9077": [0.31, 0.86],
-  "MRN 40-5530": [0.18, 0.41],
-  "MRN 40-8104": [0.29, 0.77],
+  "MRN 40-8821": [380, 1020],
+  "MRN 40-7315": [220, 540],
+  "MRN 40-6642": [460, 1310],
+  "MRN 40-9077": [310, 860],
+  "MRN 40-5530": [180, 410],
+  "MRN 40-8104": [290, 770],
 };
 
 /** Defaults match the game: every level is randomized today. */
@@ -126,24 +127,26 @@ export const BUILT_IN_PRESETS: Preset[] = [
   },
 ];
 
+// Passed = got through all 10 gates with a life left, so score = 10 minus lives lost.
 export const SESSIONS: Session[] = [
-  { date: "12 Sep 2026", level: "4", score: "3,240", lives: "1 of 3", status: "Passed", dur: "4:12" },
-  { date: "09 Sep 2026", level: "4", score: "1,890", lives: "0 of 3", status: "Failed", dur: "3:48" },
-  { date: "05 Sep 2026", level: "4", score: "2,110", lives: "0 of 3", status: "Failed", dur: "3:31" },
-  { date: "03 Sep 2026", level: "3", score: "2,980", lives: "1 of 3", status: "Passed", dur: "4:02" },
-  { date: "29 Aug 2026", level: "3", score: "2,740", lives: "2 of 3", status: "Passed", dur: "3:55" },
-  { date: "24 Aug 2026", level: "3", score: "1,420", lives: "0 of 3", status: "Failed", dur: "2:47" },
-  { date: "19 Aug 2026", level: "2", score: "2,360", lives: "3 of 3", status: "Passed", dur: "3:20" },
+  { date: "12 Sep 2026", level: "4", score: 8, lives: "1 of 3", status: "Passed", dur: "4:12" },
+  { date: "09 Sep 2026", level: "4", score: 6, lives: "0 of 3", status: "Failed", dur: "3:48" },
+  { date: "05 Sep 2026", level: "4", score: 5, lives: "0 of 3", status: "Failed", dur: "3:31" },
+  { date: "03 Sep 2026", level: "3", score: 8, lives: "1 of 3", status: "Passed", dur: "4:02" },
+  { date: "29 Aug 2026", level: "3", score: 9, lives: "2 of 3", status: "Passed", dur: "3:55" },
+  { date: "24 Aug 2026", level: "3", score: 4, lives: "0 of 3", status: "Failed", dur: "2:47" },
+  { date: "19 Aug 2026", level: "2", score: 10, lives: "3 of 3", status: "Passed", dur: "3:20" },
 ];
 
+/** Max strength (a.u.) from each Astro Boost test. */
 export const BASELINE_TREND = [
-  { label: "14 Jul", v: 0.62 },
-  { label: "24 Jul", v: 0.71 },
-  { label: "04 Aug", v: 0.68 },
-  { label: "11 Aug", v: 0.58 },
-  { label: "24 Aug", v: 0.83 },
-  { label: "03 Sep", v: 0.91 },
-  { label: "12 Sep", v: 1.02 },
+  { label: "14 Jul", v: 620 },
+  { label: "24 Jul", v: 710 },
+  { label: "04 Aug", v: 680 },
+  { label: "11 Aug", v: 580 },
+  { label: "24 Aug", v: 830 },
+  { label: "03 Sep", v: 910 },
+  { label: "12 Sep", v: 1020 },
 ];
 
 export const LEVEL_TRACK = [
@@ -154,11 +157,5 @@ export const LEVEL_TRACK = [
   { state: "Locked", history: "Not started" },
 ] as const;
 
-/** Shared x positions for the two small per-session charts. */
+/** x positions for the Planets chart, one per session. */
 export const SESSION_XS = [56, 102, 148, 194, 240, 286, 332];
-export const GLIDE_PRACTICE = [52, 58, 61, 55, 68, 73, 79];
-export const ASTRO_BOOST = {
-  score: [2360, 1420, 2740, 2980, 2110, 1890, 3240],
-  gates: [9, 7, 11, 12, 10, 9, 12],
-  levels: ["L2", "L3", "L3", "L3", "L4", "L4", "L4"],
-};

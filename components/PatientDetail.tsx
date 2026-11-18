@@ -1,14 +1,14 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
-  ASTRO_BOOST,
   BASELINE_PENDING,
   BASELINE_TREND,
-  GLIDE_PRACTICE,
   LEVEL_TRACK,
   SESSIONS,
   SESSION_XS,
   type Patient,
 } from "@/lib/mockData";
+import { PATIENT_TEXT, SESSION_TEXT } from "@/lib/descriptions";
+import { CardIntro, Term } from "./Explain";
 import { resultColor } from "./PatientRoster";
 
 const SESSION_COLS = "grid-cols-[minmax(0,1.4fr)_minmax(0,0.6fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,1fr)_16px]";
@@ -16,25 +16,24 @@ const CARD = "rounded-[14px] border border-bd bg-card";
 
 // Baseline chart geometry
 const bx = (i: number) => 70 + i * 110;
-const by = (v: number) => 244 - (v / 1.2) * 224;
+const by = (v: number) => 244 - (v / 1200) * 224;
 const baseDots = BASELINE_TREND.map((d, i) => ({ x: bx(i), y: by(d.v).toFixed(1), label: d.label }));
 const basePoints = baseDots.map((d) => `${d.x},${d.y}`).join(" ");
 
-// Glide Practice / Astro Boost geometry (shared 380×220 viewBox)
-const gpDots = GLIDE_PRACTICE.map((v, i) => ({ x: SESSION_XS[i], y: (176 - (v / 100) * 160).toFixed(1) }));
-const gpPoints = gpDots.map((d) => `${d.x},${d.y}`).join(" ");
-const abBars = ASTRO_BOOST.score.map((v, i) => {
-  const y = 176 - (v / 4500) * 160;
-  return { x: SESSION_XS[i] - 11, y: y.toFixed(1), h: (176 - y).toFixed(1) };
+// Planets chart geometry (380×220 viewBox): one bar per session, oldest first
+const planetSessions = [...SESSIONS].reverse();
+const planetBars = planetSessions.map((s, i) => {
+  const y = 176 - (s.score / 10) * 160;
+  return {
+    x: SESSION_XS[i],
+    y: y.toFixed(1),
+    h: (176 - y).toFixed(1),
+    level: `L${s.level}`,
+    passed: s.status === "Passed",
+    session: s,
+  };
 });
-const abDots = ASTRO_BOOST.gates.map((g, i) => ({ x: SESSION_XS[i], y: (176 - (g / 15) * 160).toFixed(1) }));
-const abPoints = abDots.map((d) => `${d.x},${d.y}`).join(" ");
-const sparseDates = [
-  { x: 56, label: "19 Aug" },
-  { x: 148, label: "29 Aug" },
-  { x: 240, label: "05 Sep" },
-  { x: 332, label: "12 Sep" },
-];
+const strengthGain = Math.round((BASELINE_TREND.at(-1)!.v / BASELINE_TREND[0].v - 1) * 100);
 
 function AxisText({ x, y, anchor = "end", children }: { x: number; y: number; anchor?: "start" | "middle" | "end"; children: ReactNode }) {
   return (
@@ -55,12 +54,19 @@ interface PatientDetailProps {
 }
 
 export default function PatientDetail({ patient, onBack, onOpenSession }: PatientDetailProps) {
+  const [hoverBar, setHoverBar] = useState<number | null>(null);
+  const hovered = hoverBar === null ? null : planetBars[hoverBar];
   const baseline = BASELINE_PENDING.has(patient.mrn) ? "Baseline pending" : "Baseline complete, recalibrated 12 Sep 2026";
 
   const stats = [
-    { k: "Max RMS voltage", v: "1.02 mV", sub: "+64% since first baseline", subClass: "text-pass" },
+    {
+      k: "Max strength",
+      v: `${BASELINE_TREND.at(-1)!.v.toLocaleString("en-US")} a.u.`,
+      sub: `+${strengthGain}% since first Astro Boost`,
+      subClass: "text-pass",
+    },
     { k: "Current level", v: `${patient.level} of 5`, sub: "12 sessions total" },
-    { k: "PID gains (Kp / Ki / Kd)", v: "0.85 / 0.04 / 0.12", sub: "Tuned for this patient", mono: true },
+    { k: "PID gains (Kp / Ki / Kd)", v: "1.2 / 0.05 / 0.40", sub: "Kd set by Glide Practice", mono: true },
     { k: "Engagement", v: "1,480 coins", sub: "4 of 9 skins unlocked" },
   ];
 
@@ -72,14 +78,16 @@ export default function PatientDetail({ patient, onBack, onOpenSession }: Patien
         </button>
         <h1 className="mt-3 text-[28px] font-semibold tracking-[-0.02em]">{patient.name}</h1>
         <div className="mt-1.5 text-sm text-t2">
-          {patient.leg} leg · {patient.mrn} · {baseline}
+          {patient.leg} leg · {patient.mrn} · <Term tip={PATIENT_TEXT.baseline}>{baseline}</Term>
         </div>
       </div>
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,230px),1fr))] gap-px overflow-hidden rounded-[14px] border border-bd bg-line">
         {stats.map((s) => (
           <div key={s.k} className="bg-card px-[22px] py-5">
-            <div className="text-[12.5px] text-t3">{s.k}</div>
+            <div className="text-[12.5px] text-t3">
+              <Term tip={PATIENT_TEXT.tiles[s.k]}>{s.k}</Term>
+            </div>
             {s.mono ? (
               <div className="mt-2 font-mono text-[17px] whitespace-nowrap">{s.v}</div>
             ) : (
@@ -91,13 +99,13 @@ export default function PatientDetail({ patient, onBack, onOpenSession }: Patien
       </div>
 
       <div className={`${CARD} px-[26px] py-6`}>
-        <div className="text-base font-semibold">Baseline strength</div>
-        <div className="mt-[3px] text-[13px] text-t3">Max RMS voltage (mV) at each recalibration</div>
+        <div className="text-base font-semibold">Astro Boost</div>
+        <CardIntro text="Max strength (a.u.) from each Astro Boost test." sections={PATIENT_TEXT.astroBoost} />
         <svg viewBox="0 0 760 240" className="mt-[18px] block aspect-[760/240] h-auto w-full overflow-visible">
           {[20, 76, 132, 188].map((y) => (
             <line key={y} x1={44} y1={y} x2={760} y2={y} className="stroke-grid" />
           ))}
-          {[["1.2", 24], ["0.9", 80], ["0.6", 136], ["0.3", 192]].map(([t, y]) => (
+          {[["1200", 24], ["900", 80], ["600", 136], ["300", 192]].map(([t, y]) => (
             <AxisText key={t} x={34} y={y as number}>{t}</AxisText>
           ))}
           <polygon points={`${basePoints} 730,244 70,244`} className="fill-acc/10" />
@@ -111,69 +119,99 @@ export default function PatientDetail({ patient, onBack, onOpenSession }: Patien
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,400px),1fr))] gap-6">
         <div className={`${CARD} px-[26px] py-6`}>
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-            <div className="text-base font-semibold">Glide Practice</div>
-            <div className="text-[13px] text-pass">79% latest</div>
+          <div className="text-base font-semibold">Glide Practice</div>
+          <CardIntro
+            text="Tracking error: how far the patient's astronaut strays from the guide. Lower is better."
+            sections={PATIENT_TEXT.glidePractice}
+            label="About this test"
+          />
+          <div className="mt-[18px] flex aspect-[380/200] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-bd px-6 text-center">
+            <div className="text-sm font-medium text-t2">Not recorded yet</div>
+            <div className="max-w-[300px] text-[12.5px] leading-normal text-t3">
+              The game measures this during Glide Practice but doesn&apos;t save it yet.
+            </div>
           </div>
-          <div className="mt-[3px] text-[13px] text-t3">Control accuracy: time the RMS signal stayed in the target band</div>
-          <svg viewBox="0 0 380 220" className="mt-[18px] block aspect-[380/220] h-auto w-full overflow-visible">
-            {[16, 96, 176].map((y) => (
-              <line key={y} x1={36} y1={y} x2={352} y2={y} className="stroke-grid" />
-            ))}
-            <AxisText x={28} y={20}>100%</AxisText>
-            <AxisText x={28} y={100}>50%</AxisText>
-            <AxisText x={28} y={180}>0%</AxisText>
-            <polygon points={`${gpPoints} 332,176 56,176`} className="fill-acc/10" />
-            <polyline points={gpPoints} fill="none" strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" className="stroke-acc" />
-            <Dots dots={gpDots} />
-            {[{ x: 56, label: "21 Jul" }, { x: 148, label: "04 Aug" }, { x: 240, label: "20 Aug" }, { x: 332, label: "10 Sep" }].map((d) => (
-              <AxisText key={d.label} x={d.x} y={204} anchor="middle">{d.label}</AxisText>
-            ))}
-          </svg>
         </div>
 
         <div className={`${CARD} px-[26px] py-6`}>
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-            <div className="text-base font-semibold">Astro Boost</div>
+            <div className="text-base font-semibold">Planets</div>
             <div className="flex flex-wrap gap-3.5 text-[13px] text-t2">
               <div className="flex items-center gap-[7px]">
-                <span className="size-2.5 rounded-[2px] bg-[oklch(0.42_0.06_240)]" />
-                Score
+                <span className="size-2.5 rounded-[2px] bg-pass" />
+                Passed
               </div>
               <div className="flex items-center gap-[7px]">
-                <span className="h-[3px] w-4 bg-acc" />
-                Gates passed
+                <span className="size-2.5 rounded-[2px] bg-fail" />
+                Failed
               </div>
             </div>
           </div>
-          <div className="mt-[3px] text-[13px] text-t3">Gameplay per session, with level reached under each bar</div>
-          <svg viewBox="0 0 380 220" className="mt-[18px] block aspect-[380/220] h-auto w-full overflow-visible">
-            {[16, 69.3, 122.7, 176].map((y) => (
-              <line key={y} x1={36} y1={y} x2={352} y2={y} className="stroke-grid" />
-            ))}
-            {[["4.5k", "15", 20], ["3k", "10", 73.3], ["1.5k", "5", 126.7], ["0", "0", 180]].map(([l, r, y]) => (
-              <g key={y}>
-                <AxisText x={28} y={y as number}>{l}</AxisText>
-                <AxisText x={358} y={y as number} anchor="start">{r}</AxisText>
-              </g>
-            ))}
-            {abBars.map((b) => (
-              <rect key={b.x} x={b.x} y={b.y} width={22} height={b.h} rx={3} className="fill-[oklch(0.42_0.06_240)]" />
-            ))}
-            <polyline points={abPoints} fill="none" strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" className="stroke-acc" />
-            <Dots dots={abDots} />
-            {ASTRO_BOOST.levels.map((l, i) => (
-              <AxisText key={i} x={SESSION_XS[i]} y={194} anchor="middle">{l}</AxisText>
-            ))}
-            {sparseDates.map((d) => (
-              <AxisText key={d.label} x={d.x} y={212} anchor="middle">{d.label}</AxisText>
-            ))}
-          </svg>
+          <CardIntro
+            text="Gates passed per session (out of 10), with the planet under each bar."
+            sections={PATIENT_TEXT.planets}
+          />
+          <div className="relative mt-[18px]" onMouseLeave={() => setHoverBar(null)}>
+            <svg viewBox="0 0 380 200" className="block aspect-[380/200] h-auto w-full overflow-visible">
+              {[16, 96, 176].map((y) => (
+                <line key={y} x1={36} y1={y} x2={352} y2={y} className="stroke-grid" />
+              ))}
+              {[["10", 20], ["5", 100], ["0", 180]].map(([t, y]) => (
+                <AxisText key={t} x={28} y={y as number}>{t}</AxisText>
+              ))}
+              {planetBars.map((b, i) => (
+                <rect
+                  key={b.x}
+                  x={b.x - 11}
+                  y={b.y}
+                  width={22}
+                  height={b.h}
+                  rx={3}
+                  className={`${b.passed ? "fill-pass" : "fill-fail"} ${hoverBar === null || hoverBar === i ? "opacity-70" : "opacity-30"}`}
+                />
+              ))}
+              {planetBars.map((b) => (
+                <AxisText key={b.x} x={b.x} y={194} anchor="middle">{b.level}</AxisText>
+              ))}
+              {/* Full-height hit areas so short bars are easy to hover or tap. */}
+              {planetBars.map((b, i) => (
+                <rect
+                  key={b.x}
+                  x={b.x - 23}
+                  y={0}
+                  width={46}
+                  height={200}
+                  fill="transparent"
+                  tabIndex={0}
+                  aria-label={`${b.session.date}, level ${b.session.level}, ${b.session.score} of 10 gates, ${b.session.status}`}
+                  onMouseEnter={() => setHoverBar(i)}
+                  onFocus={() => setHoverBar(i)}
+                  onBlur={() => setHoverBar(null)}
+                  onClick={() => setHoverBar(i)}
+                  className="cursor-default outline-none"
+                />
+              ))}
+            </svg>
+            {hovered && (
+              <div
+                role="tooltip"
+                style={{ left: `${(hovered.x / 380) * 100}%`, top: `${(parseFloat(hovered.y) / 200) * 100}%` }}
+                className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+8px)] rounded-lg border border-bd bg-pop px-3 py-2 text-[12.5px] whitespace-nowrap shadow-lg"
+              >
+                <div className="font-medium text-t1">{hovered.session.date}</div>
+                <div className="mt-0.5 text-t2">
+                  Level {hovered.session.level} · {hovered.session.score} of 10 gates
+                </div>
+                <div className={`mt-0.5 font-medium ${resultColor(hovered.session.status)}`}>{hovered.session.status}</div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       <div className={`${CARD} px-[26px] py-6`}>
         <div className="text-base font-semibold">Level progress</div>
+        <div className="mt-1 text-[13px] leading-normal text-t3">{PATIENT_TEXT.levelProgress}</div>
         <div className="mt-5 grid grid-cols-5 gap-3">
           {LEVEL_TRACK.map((L, i) => {
             const done = L.state === "Cleared";
@@ -196,8 +234,12 @@ export default function PatientDetail({ patient, onBack, onOpenSession }: Patien
           <div className={`grid ${SESSION_COLS} gap-3 border-y border-line px-[26px] py-2.5 text-[12.5px] text-t3`}>
             <div>Date</div>
             <div>Level</div>
-            <div>Score</div>
-            <div>Lives left</div>
+            <div>
+              <Term tip={SESSION_TEXT.tiles.Score}>Score</Term>
+            </div>
+            <div>
+              <Term tip={SESSION_TEXT.tiles["Lives left"]}>Lives left</Term>
+            </div>
             <div>Result</div>
             <div />
           </div>
@@ -213,7 +255,7 @@ export default function PatientDetail({ patient, onBack, onOpenSession }: Patien
                 <div className="mt-0.5 text-[12.5px] text-t3">{s.dur} min</div>
               </div>
               <div>{s.level}</div>
-              <div>{s.score}</div>
+              <div>{s.score} of 10</div>
               <div>{s.lives}</div>
               <div className={`flex items-center gap-2 font-medium ${resultColor(s.status)}`}>
                 <span className="size-[7px] rounded-full bg-current" />
