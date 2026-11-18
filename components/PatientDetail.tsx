@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import {
   BASELINE_PENDING,
   BASELINE_TREND,
+  GLIDE_TRACKING,
   LEVEL_TRACK,
   SESSIONS,
   SESSION_XS,
@@ -26,13 +27,16 @@ const planetBars = planetSessions.map((s, i) => {
   const y = 176 - (s.score / 10) * 160;
   return {
     x: SESSION_XS[i],
-    y: y.toFixed(1),
-    h: (176 - y).toFixed(1),
+    y,
+    h: 176 - y,
     level: `L${s.level}`,
     passed: s.status === "Passed",
     session: s,
   };
 });
+// Glide Practice chart geometry (same viewBox): average tracking error, 0–80 px
+const glideDots = GLIDE_TRACKING.map((d, i) => ({ x: SESSION_XS[i], y: 176 - (d.px / 80) * 160, ...d }));
+const glidePoints = glideDots.map((d) => `${d.x},${d.y.toFixed(1)}`).join(" ");
 const strengthGain = Math.round((BASELINE_TREND.at(-1)!.v / BASELINE_TREND[0].v - 1) * 100);
 
 function AxisText({ x, y, anchor = "end", children }: { x: number; y: number; anchor?: "start" | "middle" | "end"; children: ReactNode }) {
@@ -47,6 +51,59 @@ function Dots({ dots, r = 4 }: { dots: { x: number; y: string }[]; r?: number })
   return dots.map((d) => <circle key={d.x} cx={d.x} cy={d.y} r={r} strokeWidth={2} className="fill-card stroke-acc" />);
 }
 
+const CHART_W = 380;
+const CHART_H = 200;
+
+/** Small chart with a hover/tap tooltip for each column of `points` (viewBox units). */
+function HoverChart({
+  points,
+  label,
+  tip,
+  children,
+}: {
+  points: { x: number; y: number }[];
+  label: (i: number) => string;
+  tip: (i: number) => ReactNode;
+  children: (hover: number | null) => ReactNode;
+}) {
+  const [hover, setHover] = useState<number | null>(null);
+  const p = hover === null ? null : points[hover];
+  return (
+    <div className="relative mt-[18px]" onMouseLeave={() => setHover(null)}>
+      <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="block aspect-[380/200] h-auto w-full overflow-visible">
+        {children(hover)}
+        {/* Full-height hit areas so short marks are easy to hover or tap. */}
+        {points.map((pt, i) => (
+          <rect
+            key={pt.x}
+            x={pt.x - 23}
+            y={0}
+            width={46}
+            height={CHART_H}
+            fill="transparent"
+            tabIndex={0}
+            aria-label={label(i)}
+            onMouseEnter={() => setHover(i)}
+            onFocus={() => setHover(i)}
+            onBlur={() => setHover(null)}
+            onClick={() => setHover(i)}
+            className="cursor-default outline-none"
+          />
+        ))}
+      </svg>
+      {p && hover !== null && (
+        <div
+          role="tooltip"
+          style={{ left: `${(p.x / CHART_W) * 100}%`, top: `${(p.y / CHART_H) * 100}%` }}
+          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-lg border border-bd bg-pop px-3 py-2 text-[12.5px] whitespace-nowrap shadow-lg"
+        >
+          {tip(hover)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface PatientDetailProps {
   patient: Patient;
   onBack: () => void;
@@ -54,8 +111,6 @@ interface PatientDetailProps {
 }
 
 export default function PatientDetail({ patient, onBack, onOpenSession }: PatientDetailProps) {
-  const [hoverBar, setHoverBar] = useState<number | null>(null);
-  const hovered = hoverBar === null ? null : planetBars[hoverBar];
   const baseline = BASELINE_PENDING.has(patient.mrn) ? "Baseline pending" : "Baseline complete, recalibrated 12 Sep 2026";
 
   const stats = [
@@ -119,18 +174,42 @@ export default function PatientDetail({ patient, onBack, onOpenSession }: Patien
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,400px),1fr))] gap-6">
         <div className={`${CARD} px-[26px] py-6`}>
-          <div className="text-base font-semibold">Glide Practice</div>
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <div className="text-base font-semibold">Glide Practice</div>
+            <div className="rounded-full border border-warn/40 px-2.5 py-1 text-xs font-medium text-warn">Sample data</div>
+          </div>
           <CardIntro
-            text="Tracking error: how far the patient's astronaut strays from the guide. Lower is better."
+            text="Average tracking error per test, in pixels: how far the patient's astronaut strays from the guide. Lower is better."
             sections={PATIENT_TEXT.glidePractice}
             label="About this test"
           />
-          <div className="mt-[18px] flex aspect-[380/200] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-bd px-6 text-center">
-            <div className="text-sm font-medium text-t2">Not recorded yet</div>
-            <div className="max-w-[300px] text-[12.5px] leading-normal text-t3">
-              The game measures this during Glide Practice but doesn&apos;t save it yet.
-            </div>
-          </div>
+          <HoverChart
+            points={glideDots}
+            label={(i) => `${glideDots[i].date}, ${glideDots[i].px} pixels average error, sample data`}
+            tip={(i) => (
+              <>
+                <div className="font-medium text-t1">{glideDots[i].date}</div>
+                <div className="mt-0.5 text-t2">{glideDots[i].px} px average error</div>
+                <div className="mt-0.5 text-warn">Sample data</div>
+              </>
+            )}
+          >
+            {(hover) => (
+              <>
+                {[16, 96, 176].map((y) => (
+                  <line key={y} x1={36} y1={y} x2={352} y2={y} className="stroke-grid" />
+                ))}
+                {[["80 px", 20], ["40 px", 100], ["0 px", 180]].map(([t, y]) => (
+                  <AxisText key={t} x={28} y={y as number}>{t}</AxisText>
+                ))}
+                <polygon points={`${glidePoints} 332,176 56,176`} className="fill-acc/10" />
+                <polyline points={glidePoints} fill="none" strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" className="stroke-acc" />
+                {glideDots.map((d, i) => (
+                  <circle key={d.x} cx={d.x} cy={d.y} r={hover === i ? 6 : 4} strokeWidth={2} className="fill-card stroke-acc" />
+                ))}
+              </>
+            )}
+          </HoverChart>
         </div>
 
         <div className={`${CARD} px-[26px] py-6`}>
@@ -151,61 +230,50 @@ export default function PatientDetail({ patient, onBack, onOpenSession }: Patien
             text="Gates passed per session (out of 10), with the planet under each bar."
             sections={PATIENT_TEXT.planets}
           />
-          <div className="relative mt-[18px]" onMouseLeave={() => setHoverBar(null)}>
-            <svg viewBox="0 0 380 200" className="block aspect-[380/200] h-auto w-full overflow-visible">
-              {[16, 96, 176].map((y) => (
-                <line key={y} x1={36} y1={y} x2={352} y2={y} className="stroke-grid" />
-              ))}
-              {[["10", 20], ["5", 100], ["0", 180]].map(([t, y]) => (
-                <AxisText key={t} x={28} y={y as number}>{t}</AxisText>
-              ))}
-              {planetBars.map((b, i) => (
-                <rect
-                  key={b.x}
-                  x={b.x - 11}
-                  y={b.y}
-                  width={22}
-                  height={b.h}
-                  rx={3}
-                  className={`${b.passed ? "fill-pass" : "fill-fail"} ${hoverBar === null || hoverBar === i ? "opacity-70" : "opacity-30"}`}
-                />
-              ))}
-              {planetBars.map((b) => (
-                <AxisText key={b.x} x={b.x} y={194} anchor="middle">{b.level}</AxisText>
-              ))}
-              {/* Full-height hit areas so short bars are easy to hover or tap. */}
-              {planetBars.map((b, i) => (
-                <rect
-                  key={b.x}
-                  x={b.x - 23}
-                  y={0}
-                  width={46}
-                  height={200}
-                  fill="transparent"
-                  tabIndex={0}
-                  aria-label={`${b.session.date}, level ${b.session.level}, ${b.session.score} of 10 gates, ${b.session.status}`}
-                  onMouseEnter={() => setHoverBar(i)}
-                  onFocus={() => setHoverBar(i)}
-                  onBlur={() => setHoverBar(null)}
-                  onClick={() => setHoverBar(i)}
-                  className="cursor-default outline-none"
-                />
-              ))}
-            </svg>
-            {hovered && (
-              <div
-                role="tooltip"
-                style={{ left: `${(hovered.x / 380) * 100}%`, top: `${(parseFloat(hovered.y) / 200) * 100}%` }}
-                className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+8px)] rounded-lg border border-bd bg-pop px-3 py-2 text-[12.5px] whitespace-nowrap shadow-lg"
-              >
-                <div className="font-medium text-t1">{hovered.session.date}</div>
-                <div className="mt-0.5 text-t2">
-                  Level {hovered.session.level} · {hovered.session.score} of 10 gates
-                </div>
-                <div className={`mt-0.5 font-medium ${resultColor(hovered.session.status)}`}>{hovered.session.status}</div>
-              </div>
+          <HoverChart
+            points={planetBars}
+            label={(i) => {
+              const ses = planetBars[i].session;
+              return `${ses.date}, level ${ses.level}, ${ses.score} of 10 gates, ${ses.status}`;
+            }}
+            tip={(i) => {
+              const ses = planetBars[i].session;
+              return (
+                <>
+                  <div className="font-medium text-t1">{ses.date}</div>
+                  <div className="mt-0.5 text-t2">
+                    Level {ses.level} · {ses.score} of 10 gates
+                  </div>
+                  <div className={`mt-0.5 font-medium ${resultColor(ses.status)}`}>{ses.status}</div>
+                </>
+              );
+            }}
+          >
+            {(hover) => (
+              <>
+                {[16, 96, 176].map((y) => (
+                  <line key={y} x1={36} y1={y} x2={352} y2={y} className="stroke-grid" />
+                ))}
+                {[["10", 20], ["5", 100], ["0", 180]].map(([t, y]) => (
+                  <AxisText key={t} x={28} y={y as number}>{t}</AxisText>
+                ))}
+                {planetBars.map((b, i) => (
+                  <rect
+                    key={b.x}
+                    x={b.x - 11}
+                    y={b.y}
+                    width={22}
+                    height={b.h}
+                    rx={3}
+                    className={`${b.passed ? "fill-pass" : "fill-fail"} ${hover === null || hover === i ? "opacity-70" : "opacity-30"}`}
+                  />
+                ))}
+                {planetBars.map((b) => (
+                  <AxisText key={b.x} x={b.x} y={194} anchor="middle">{b.level}</AxisText>
+                ))}
+              </>
             )}
-          </div>
+          </HoverChart>
         </div>
       </div>
 

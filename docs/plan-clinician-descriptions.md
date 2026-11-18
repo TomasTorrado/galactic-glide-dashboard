@@ -155,6 +155,8 @@ Facts found in the code while writing:
 - **Sessions table:** tooltips on Score and Lives left.
 - **Tooltips now float above the page** (position fixed), so cards that clip or scroll can't cut them off. They close when the page scrolls.
 
+- **Glide Practice** now shows a **sample** chart (average tracking error in px per test, lower is better), clearly marked "Sample data", to preview it until the game saves real results. Points and bars have a styled hover/tap tooltip, shared by both small charts (`HoverChart` in PatientDetail).
+
 ## 10. Next
 - Tomas reviews the Session detail wording.
 - Then Patient detail (baseline, Max RMS, Glide Practice "target band", Astro Boost), Protocols (EMG calibration), and Game Launcher.

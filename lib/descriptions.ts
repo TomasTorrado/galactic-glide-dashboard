@@ -84,8 +84,12 @@ export const PATIENT_TEXT = {
       body: "The result sets Kd, one of the movement-smoothing settings (PID gains), for this patient.",
     },
     {
-      title: "Why there's no data",
-      body: "The game calculates the tracking error but doesn't save it yet, so there is nothing to chart. It will appear here once the game records it.",
+      title: "What the chart shows",
+      body: "Each point is one Glide Practice test: the average tracking error in pixels on that date. Hover over or tap a point to see its value.",
+    },
+    {
+      title: "About this sample",
+      body: "The game calculates tracking error but doesn't save it yet, so this chart shows sample data to preview how it will look. Real results will replace it once the game records them.",
     },
   ],
   planets: [

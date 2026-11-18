@@ -157,5 +157,19 @@ export const LEVEL_TRACK = [
   { state: "Locked", history: "Not started" },
 ] as const;
 
-/** x positions for the Planets chart, one per session. */
+/**
+ * SAMPLE: average Glide Practice tracking error (px) per test. The game computes this but doesn't save it yet.
+ * Same dates as Astro Boost, since both tests are redone together at recalibration.
+ */
+export const GLIDE_TRACKING = [
+  { date: "14 Jul 2026", px: 62 },
+  { date: "24 Jul 2026", px: 55 },
+  { date: "04 Aug 2026", px: 51 },
+  { date: "11 Aug 2026", px: 57 },
+  { date: "24 Aug 2026", px: 44 },
+  { date: "03 Sep 2026", px: 36 },
+  { date: "12 Sep 2026", px: 28 },
+];
+
+/** x positions for the Glide Practice and Planets charts, one per point. */
 export const SESSION_XS = [56, 102, 148, 194, 240, 286, 332];
